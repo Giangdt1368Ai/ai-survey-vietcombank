@@ -62,8 +62,14 @@
         .question-title {
             font-size: 18px;
             color: var(--secondary);
-            margin-bottom: 20px;
             line-height: 1.5;
+        }
+        .question-subtitle {
+            font-size: 14px;
+            font-style: italic;
+            color: #777;
+            margin-top: 5px;
+            margin-bottom: 20px;
         }
         .options-grid {
             display: grid;
@@ -116,11 +122,10 @@
             font-size: 14px;
         }
         .radio-grid .option-item label {
-            flex-direction: column;
+            flex-direction: row;
             align-items: flex-start;
-            gap: 8px;
         }
-        .radio-grid .checkmark { border-radius: 50%; }
+        .radio-grid .checkmark { border-radius: 50%; margin-top: 2px; }
         .radio-grid .option-item input:checked + label .checkmark::after {
             content: '';
             width: 10px;
@@ -129,9 +134,9 @@
             border-radius: 50%;
         }
         .option-text {
-            font-size: 13px;
-            line-height: 1.4;
-            color: #555;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #444;
         }
         .submit-btn {
             display: block;
@@ -297,7 +302,7 @@
         <form id="surveyForm">
             <div class="survey-card" id="question1">
                 <span class="question-number">Câu 1</span>
-                <h3 class="question-title">Bạn đã sử dụng những AI nào trong số các AI dưới đây?</h3>
+                <h3 class="question-title" style="margin-bottom: 20px;">Bạn đã sử dụng những AI nào trong số các AI dưới đây?</h3>
                 <div class="options-grid">
                     <div class="option-item"><input type="checkbox" id="ai1" name="ai_tools" value="ChatGPT"><label for="ai1"><span class="checkmark"></span>ChatGPT</label></div>
                     <div class="option-item"><input type="checkbox" id="ai2" name="ai_tools" value="Gemini"><label for="ai2"><span class="checkmark"></span>Gemini</label></div>
@@ -314,29 +319,46 @@
                 </div>
             </div>
 
+            <!-- ĐOẠN CÂU 2 ĐÃ ĐƯỢC CHỈNH SỬA THEO HÌNH ẢNH MỚI -->
             <div class="survey-card" id="question2">
                 <span class="question-number">Câu 2</span>
-                <h3 class="question-title">AI Agent (như Codex / Cowork) có khả năng tự chủ thực hiện tác vụ nào sau đây trong quy trình thẩm định giá?</h3>
+                <h3 class="question-title">AI hiện nay đã thực hiện được những tác vụ nào sau đây?</h3>
+                <p class="question-subtitle"></p>
                 <div class="options-grid radio-grid">
                     <div class="option-item">
                         <input type="radio" id="q2a" name="ai_agent" value="A" required>
-                        <label for="q2a"><span class="checkmark"></span><span class="option-text"><strong>A.</strong> Tự động phân tích tập dữ liệu lịch sử giao dịch được cung cấp để viết mã tính toán đơn giá đất trung bình, lập bảng vẽ biểu đồ biến động giá.</span></label>
+                        <label for="q2a">
+                            <span class="checkmark"></span>
+                            <span class="option-text"><strong>A.</strong> Tự động phân tích tập dữ liệu lịch sử giao dịch được cung cấp để viết mã tính toán đơn giá đất trung bình, lập bảng và vẽ biểu đồ biến động giá.</span>
+                        </label>
                     </div>
                     <div class="option-item">
                         <input type="radio" id="q2b" name="ai_agent" value="B">
-                        <label for="q2b"><span class="checkmark"></span><span class="option-text"><strong>B.</strong> Tự động soạn thảo và gửi email trình duyệt kết quả định giá tài sản cho cấp quản lý dựa trên các dữ liệu đã được trích xuất và tổng hợp.</span></label>
+                        <label for="q2b">
+                            <span class="checkmark"></span>
+                            <span class="option-text"><strong>B.</strong> Tự động soạn thảo và gửi email dựa trên các dữ liệu đã được trích xuất và tổng hợp.</span>
+                        </label>
                     </div>
                     <div class="option-item">
                         <input type="radio" id="q2c" name="ai_agent" value="C">
-                        <label for="q2c"><span class="checkmark"></span><span class="option-text"><strong>C.</strong> Tự động truy cập ẩn sâu vào ổ đĩa cứng cục bộ (ví dụ: ổ D:) trên máy tính cá nhân để tự rà soát và thu thập các hồ sơ pháp lý.</span></label>
+                        <label for="q2c">
+                            <span class="checkmark"></span>
+                            <span class="option-text"><strong>C.</strong> Tự động truy cập ẩn sâu vào ổ đĩa cứng cục bộ (ví dụ: ổ D:) trên máy tính cá nhân để tự rà soát và thu thập các hồ sơ pháp lý.</span>
+                        </label>
                     </div>
                     <div class="option-item">
                         <input type="radio" id="q2d" name="ai_agent" value="D">
-                        <label for="q2d"><span class="checkmark"></span><span class="option-text"><strong>D.</strong> Đối chiếu dữ liệu nhập liệu trên Báo cáo với thông tin đọc được từ Giấy chứng nhận quyền sử dụng đất và các nguyên tắc, sổ tay lập báo cáo để phát hiện lỗi sai sót trước khi trình hồ sơ.</span></label>
+                        <label for="q2d">
+                            <span class="checkmark"></span>
+                            <span class="option-text"><strong>D.</strong> Đối chiếu dữ liệu nhập liệu trên Báo cáo với thông tin đọc được từ hồ sơ và các nguyên tắc cho trước để phát hiện lỗi.</span>
+                        </label>
                     </div>
                     <div class="option-item">
                         <input type="radio" id="q2e" name="ai_agent" value="E">
-                        <label for="q2e"><span class="checkmark"></span><span class="option-text"><strong>E.</strong> Cả 4 đáp án trên</span></label>
+                        <label for="q2e">
+                            <span class="checkmark"></span>
+                            <span class="option-text"><strong>E.</strong> Cả 4 đáp án trên.</span>
+                        </label>
                     </div>
                 </div>
             </div>
@@ -377,7 +399,7 @@
     </div>
 
     <script>
-        // API URL ĐÃ ĐƯỢC CẬP NHẬT TRỰC TIẾP TỪ GOOGLE SCRIPT CỦA ANH
+        // API URL TRỰC TIẾP TỪ GOOGLE SCRIPT 
         const GOOGLE_API_URL = 'https://script.google.com/macros/s/AKfycbzu7Fu2muHbgeBHzi8c3Hl85H7zEyZydDgMNRyLIKQeGp0Nmgu7U1uYz0Jqz8-KipUNDA/exec';
         
         const aiList = ['ChatGPT', 'Gemini', 'Claude', 'Grok', 'Copilot', 'DeepSeek', 'Perplexity AI', 'Character.AI', 'ElevenLabs', 'Midjourney', 'Gama', 'Seedance'];
