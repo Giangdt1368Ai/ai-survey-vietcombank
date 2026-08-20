@@ -35,7 +35,7 @@
             margin-bottom: 15px;
         }
         .logo img {
-            max-width: 250px;
+            max-width: 150px;
             height: auto;
         }
         .subtitle {
@@ -413,9 +413,31 @@
             const q2Labels = {A: 'A - Phân tích dữ liệu', B: 'B - Soạn & gửi email', C: 'C - Truy cập ổ cứng', D: 'D - Đối chiếu dữ liệu', E: 'E - Cả 4 đáp án'};
             document.getElementById('q2Stats').innerHTML = Object.entries(surveyData.agent_choice).map(([c, n]) => `<div class="stats-item"><span>${q2Labels[c]}</span><strong style="color: var(--primary)">${n}</strong></div>`).join('');
         }
+        
         function toggleAdmin() { const p = document.getElementById('adminPanel'); p.classList.toggle('show'); if (p.classList.contains('show')) updateStats(); }
+        
         function exportData() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(surveyData, null, 2)], {type: 'application/json'})); a.download = 'vietcombank_ai_survey_results.json'; a.click(); }
-        function resetData() { if (confirm('Xóa tất cả dữ liệu?')) { surveyData = {respondents: 0, ai_usage: {}, ai_count_distribution: {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, '5+': 0}, agent_choice: {A: 0, B: 0, C: 0, D: 0, E: 0}}; aiList.forEach(ai => surveyData.ai_usage[ai] = 0); localStorage.setItem('vietcombank_ai_survey', JSON.stringify(surveyData)); updateStats(); alert('Đã xóa!'); } }
+        
+        function resetData() {
+            const password = prompt('🔒 Nhập mật khẩu để xóa dữ liệu:');
+            if (password === null) return;
+            if (password !== '1102') {
+                alert('❌ Mật khẩu không đúng!');
+                return;
+            }
+            if (confirm('⚠️ Bạn có chắc chắn muốn xóa tất cả dữ liệu?\nHành động này không thể hoàn tác.')) {
+                surveyData = {
+                    respondents: 0,
+                    ai_usage: {},
+                    ai_count_distribution: {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, '5+': 0},
+                    agent_choice: {A: 0, B: 0, C: 0, D: 0, E: 0}
+                };
+                aiList.forEach(ai => surveyData.ai_usage[ai] = 0);
+                localStorage.setItem('vietcombank_ai_survey', JSON.stringify(surveyData));
+                updateStats();
+                alert('✅ Đã xóa tất cả dữ liệu!');
+            }
+        }
     </script>
 </body>
 </html>
