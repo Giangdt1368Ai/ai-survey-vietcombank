@@ -1,78 +1,443 @@
-<script>
-    // URL Google Apps Script của bạn
-    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwbVUMpzrRXB7217SvpuDkqc0_0owWyaFkSxv0avxU-cplY7o4UdjRH8d9vBYKa0ZhM/exec';
-    
-    let surveyData = JSON.parse(localStorage.getItem('vietcombank_ai_survey')) || {
-        respondents: 0, ai_usage: {}, ai_count_distribution: {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, '5+': 0},
-        agent_choice: {A: 0, B: 0, C: 0, D: 0, E: 0}
-    };
-    const aiList = ['ChatGPT', 'Gemini', 'Claude', 'Grok', 'Copilot', 'DeepSeek', 'Perplexity AI', 'Character.AI', 'ElevenLabs', 'Midjourney', 'Gama', 'Seedance'];
-    aiList.forEach(ai => { if (surveyData.ai_usage[ai] === undefined) surveyData.ai_usage[ai] = 0; });
-    document.getElementById('currentUrl').textContent = window.location.href;
-    
-    // GỬI DỮ LIỆU LÊN GOOGLE SHEETS
-    function sendToGoogleSheets(aiTools, aiCount, agentChoice) {
-        fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                ai_tools: aiTools,
-                ai_count: aiCount,
-                agent_choice: agentChoice
-            })
-        })
-        .then(() => console.log('✓ Đã gửi lên Google Sheets'))
-        .catch(err => console.error('Lỗi:', err));
-    }
-    
-    document.getElementById('surveyForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const selectedAIs = Array.from(document.querySelectorAll('input[name="ai_tools"]:checked')).map(cb => cb.value);
-        const agentChoice = document.querySelector('input[name="ai_agent"]:checked')?.value;
-        if (!agentChoice) { alert('Vui lòng chọn đáp án cho Câu 2'); return; }
-        
-        // Gửi lên Google Sheets
-        sendToGoogleSheets(selectedAIs, selectedAIs.length, agentChoice);
-        
-        // Lưu local
-        surveyData.respondents++;
-        selectedAIs.forEach(ai => surveyData.ai_usage[ai]++);
-        const count = selectedAIs.length;
-        if (count === 0) surveyData.ai_count_distribution[0]++;
-        else if (count <= 4) surveyData.ai_count_distribution[count]++;
-        else surveyData.ai_count_distribution['5+']++;
-        surveyData.agent_choice[agentChoice]++;
-        localStorage.setItem('vietcombank_ai_survey', JSON.stringify(surveyData));
-        
-        document.getElementById('submitBtn').style.display = 'none';
-        document.getElementById('successMessage').classList.add('show');
-        document.getElementById('question1').style.opacity = '0.5';
-        document.getElementById('question2').style.opacity = '0.5';
-        if (document.getElementById('adminPanel').classList.contains('show')) updateStats();
-    });
-
-    function updateStats() {
-        document.getElementById('totalRespondents').textContent = surveyData.respondents;
-        document.getElementById('aiStats').innerHTML = aiList.map(ai => `<div class="stats-item"><span>${ai}</span><strong style="color: var(--primary)">${surveyData.ai_usage[ai]}</strong></div>`).join('');
-        const countLabels = {0: 'Chưa dùng AI nào', 1: '1 AI', 2: '2 AI', 3: '3 AI', 4: '4 AI', '5+': '5 AI trở lên'};
-        document.getElementById('aiCountStats').innerHTML = Object.entries(surveyData.ai_count_distribution).map(([c, n]) => `<div class="stats-item"><span>${countLabels[c]}</span><strong style="color: var(--primary)">${n}</strong></div>`).join('');
-        const q2Labels = {A: 'A - Phân tích dữ liệu', B: 'B - Soạn & gửi email', C: 'C - Truy cập ổ cứng', D: 'D - Đối chiếu dữ liệu', E: 'E - Cả 4 đáp án'};
-        document.getElementById('q2Stats').innerHTML = Object.entries(surveyData.agent_choice).map(([c, n]) => `<div class="stats-item"><span>${q2Labels[c]}</span><strong style="color: var(--primary)">${n}</strong></div>`).join('');
-    }
-    
-    function toggleAdmin() { const p = document.getElementById('adminPanel'); p.classList.toggle('show'); if (p.classList.contains('show')) updateStats(); }
-    function exportData() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(surveyData, null, 2)], {type: 'application/json'})); a.download = 'vietcombank_ai_survey_results.json'; a.click(); }
-    function resetData() {
-        const password = prompt('🔒 Nhập mật khẩu để xóa dữ liệu:');
-        if (password === null) return;
-        if (password !== '1102') { alert('❌ Mật khẩu không đúng!'); return; }
-        if (confirm('⚠️ Xóa tất cả dữ liệu local?')) {
-            surveyData = {respondents: 0, ai_usage: {}, ai_count_distribution: {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, '5+': 0}, agent_choice: {A: 0, B: 0, C: 0, D: 0, E: 0}};
-            aiList.forEach(ai => surveyData.ai_usage[ai] = 0);
-            localStorage.setItem('vietcombank_ai_survey', JSON.stringify(surveyData));
-            updateStats();
-            alert('✅ Đã xóa local data!');
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Khảo sát AI - Vietcombank</title>
+    <style>
+        :root {
+            --primary: #639733;
+            --secondary: #014D2F;
+            --accent: #E5A536;
+            --white: #ffffff;
+            --light-bg: #f5f7f4;
         }
-    }
-</script>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        .header {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        .logo img {
+            max-width: 150px;
+            height: auto;
+        }
+        .subtitle {
+            color: var(--primary);
+            font-size: 18px;
+            margin-top: 10px;
+        }
+        .survey-card {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        }
+        .question-number {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        .question-title {
+            font-size: 18px;
+            color: var(--secondary);
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        .option-item { position: relative; }
+        .option-item input { position: absolute; opacity: 0; }
+        .option-item label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 18px;
+            background: var(--light-bg);
+            border: 2px solid transparent;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            color: #333;
+        }
+        .option-item label:hover {
+            background: #e8f5e9;
+            border-color: var(--primary);
+        }
+        .option-item input:checked + label {
+            background: linear-gradient(135deg, rgba(99,151,51,0.15), rgba(1,77,47,0.15));
+            border-color: var(--primary);
+            color: var(--secondary);
+            font-weight: 500;
+        }
+        .checkmark {
+            width: 22px;
+            height: 22px;
+            border: 2px solid #ccc;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+        .option-item input:checked + label .checkmark {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+        .option-item input:checked + label .checkmark::after {
+            content: '✓';
+            color: white;
+            font-size: 14px;
+        }
+        .radio-grid .option-item label {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        .radio-grid .checkmark { border-radius: 50%; }
+        .radio-grid .option-item input:checked + label .checkmark::after {
+            content: '';
+            width: 10px;
+            height: 10px;
+            background: white;
+            border-radius: 50%;
+        }
+        .option-text {
+            font-size: 13px;
+            line-height: 1.4;
+            color: #555;
+        }
+        .submit-btn {
+            display: block;
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin-top: 20px;
+        }
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99,151,51,0.4);
+        }
+        .success-message {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        .success-message.show { display: block; }
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            color: white;
+            font-size: 40px;
+        }
+        .success-message h2 {
+            color: var(--secondary);
+            margin-bottom: 10px;
+        }
+        .success-message p { color: #666; }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: rgba(255,255,255,0.9);
+            font-size: 14px;
+        }
+        .footer-brand {
+            font-weight: 600;
+            color: var(--accent);
+        }
+        .qr-section {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .qr-title { color: white; margin-bottom: 15px; }
+        .qr-info { color: rgba(255,255,255,0.8); font-size: 13px; }
+        .admin-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--accent);
+            color: var(--secondary);
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        .admin-panel {
+            display: none;
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 450px;
+            height: 100vh;
+            background: white;
+            box-shadow: -5px 0 30px rgba(0,0,0,0.2);
+            padding: 25px;
+            overflow-y: auto;
+            z-index: 1001;
+        }
+        .admin-panel.show { display: block; }
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--light-bg);
+        }
+        .admin-header h3 { color: var(--secondary); }
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+        .stats-card {
+            background: var(--light-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        .stats-card h4 {
+            color: var(--secondary);
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        .stats-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 13px;
+        }
+        .stats-item:last-child { border-bottom: none; }
+        .reset-btn {
+            width: 100%;
+            padding: 12px;
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 15px;
+        }
+        .reset-btn:hover { background: #cc0000; }
+        .export-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        @media (max-width: 600px) {
+            .options-grid { grid-template-columns: 1fr; }
+            .admin-panel { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <img src="https://raw.githubusercontent.com/Giangdt1368Ai/ai-survey-vietcombank/main/logo.png" 
+                     alt="Vietcombank Logo">
+            </div>
+            <p class="subtitle">Khảo sát mức độ sử dụng AI và nhận thức về AI Agent</p>
+        </div>
+
+        <form id="surveyForm">
+            <div class="survey-card" id="question1">
+                <span class="question-number">Câu 1</span>
+                <h3 class="question-title">Bạn đã sử dụng những AI nào trong số các AI dưới đây?</h3>
+                <div class="options-grid">
+                    <div class="option-item"><input type="checkbox" id="ai1" name="ai_tools" value="ChatGPT"><label for="ai1"><span class="checkmark"></span>ChatGPT</label></div>
+                    <div class="option-item"><input type="checkbox" id="ai2" name="ai_tools" value="Gemini"><label for="ai2"><span class="checkmark"></span>Gemini</label></div>
+                    <div class="option-item"><input type="checkbox" id="ai3" name="ai_tools" value="Claude"><label for="ai3"><span class="checkmark"></span>Claude</label></div>
+                    <div class="option-item"><input type="checkbox" id="ai4" name="ai_tools" value="Grok"><label for="ai4"><span class="checkmark"></span>Grok</label></div>
+                    <div class="option-item"><input type="checkbox" id="ai5" name="ai_tools" value="Copilot"><label for="ai5"><span class="checkmark"></span>Copilot</label></div>
+                    <div class="option-item"><input type="checkbox" id="ai6" name="ai_tools" value="DeepSeek"><label for="ai6"><span class="checkmark"></span>DeepSeek</label></div>
+                    <div class="option-item"><input type="checkbox" id="ai7" name="ai_tools" value="Perplexity AI"><label for="ai7"><span class="checkmark"></span>Perplexity AI</label></div>
+                    <div class="option-item"><input type="checkbox" id="ai8" name="ai_tools" value="Character.AI"><label for="ai8"><span class="checkmark"></span>Character.AI</label></div>
+                    <div class="option-item"><input type="checkbox" id="ai9" name="ai_tools" value="ElevenLabs"><label for="ai9"><span class="checkmark"></span>ElevenLabs</label></div>
+                    <div class="option-item"><input type="checkbox" id="ai10" name="ai_tools" value="Midjourney"><label for="ai10"><span class="checkmark"></span>Midjourney</label></div>
+                    <div class="option-item"><input type="checkbox" id="ai11" name="ai_tools" value="Gama"><label for="ai11"><span class="checkmark"></span>Gama</label></div>
+                    <div class="option-item"><input type="checkbox" id="ai12" name="ai_tools" value="Seedance"><label for="ai12"><span class="checkmark"></span>Seedance</label></div>
+                </div>
+            </div>
+
+            <div class="survey-card" id="question2">
+                <span class="question-number">Câu 2</span>
+                <h3 class="question-title">AI Agent (như Codex / Cowork) có khả năng tự chủ thực hiện tác vụ nào sau đây trong quy trình thẩm định giá?</h3>
+                <div class="options-grid radio-grid">
+                    <div class="option-item">
+                        <input type="radio" id="q2a" name="ai_agent" value="A" required>
+                        <label for="q2a"><span class="checkmark"></span><span class="option-text"><strong>A.</strong> Tự động phân tích tập dữ liệu lịch sử giao dịch được cung cấp để viết mã tính toán đơn giá đất trung bình, lập bảng vẽ biểu đồ biến động giá.</span></label>
+                    </div>
+                    <div class="option-item">
+                        <input type="radio" id="q2b" name="ai_agent" value="B">
+                        <label for="q2b"><span class="checkmark"></span><span class="option-text"><strong>B.</strong> Tự động soạn thảo và gửi email trình duyệt kết quả định giá tài sản cho cấp quản lý dựa trên các dữ liệu đã được trích xuất và tổng hợp.</span></label>
+                    </div>
+                    <div class="option-item">
+                        <input type="radio" id="q2c" name="ai_agent" value="C">
+                        <label for="q2c"><span class="checkmark"></span><span class="option-text"><strong>C.</strong> Tự động truy cập ẩn sâu vào ổ đĩa cứng cục bộ (ví dụ: ổ D:) trên máy tính cá nhân để tự rà soát và thu thập các hồ sơ pháp lý.</span></label>
+                    </div>
+                    <div class="option-item">
+                        <input type="radio" id="q2d" name="ai_agent" value="D">
+                        <label for="q2d"><span class="checkmark"></span><span class="option-text"><strong>D.</strong> Đối chiếu dữ liệu nhập liệu trên Báo cáo với thông tin đọc được từ Giấy chứng nhận quyền sử dụng đất và các nguyên tắc, sổ tay lập báo cáo để phát hiện lỗi sai sót trước khi trình hồ sơ.</span></label>
+                    </div>
+                    <div class="option-item">
+                        <input type="radio" id="q2e" name="ai_agent" value="E">
+                        <label for="q2e"><span class="checkmark"></span><span class="option-text"><strong>E.</strong> Cả 4 đáp án trên</span></label>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">Gửi câu trả lời</button>
+            <div class="success-message" id="successMessage">
+                <div class="success-icon">✓</div>
+                <h2>Cảm ơn bạn!</h2>
+                <p>Câu trả lời của bạn đã được ghi nhận thành công.</p>
+            </div>
+        </form>
+
+        <div class="qr-section">
+            <h4 class="qr-title">📱 Truy cập qua điện thoại</h4>
+            <p class="qr-info">Quét mã QR hoặc chia sẻ link để người khác tham gia khảo sát</p>
+            <p class="qr-info" style="margin-top: 10px; font-family: monospace; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; word-break: break-all;" id="currentUrl"></p>
+        </div>
+
+        <div class="footer">
+            <p style="font-size: 13px; opacity: 0.85; margin-bottom: 5px;">Tạo bởi Đặng Trường Giang</p>
+            <span class="footer-brand">Trung tâm định giá tài sản Vietcombank</span>
+        </div>
+    </div>
+
+    <button class="admin-toggle" onclick="toggleAdmin()">📊 Xem kết quả</button>
+
+    <div class="admin-panel" id="adminPanel">
+        <div class="admin-header">
+            <h3>📊 Kết quả khảo sát</h3>
+            <button class="close-btn" onclick="toggleAdmin()">×</button>
+        </div>
+        <div class="stats-card"><h4>👥 Tổng số người tham gia: <span id="totalRespondents">0</span></h4></div>
+        <div class="stats-card"><h4>🤖 Câu 1: Số người sử dụng mỗi AI</h4><div id="aiStats"></div></div>
+        <div class="stats-card"><h4>📈 Câu 1: Phân bổ số AI sử dụng</h4><div id="aiCountStats"></div></div>
+        <div class="stats-card"><h4>🔘 Câu 2: Kết quả lựa chọn</h4><div id="q2Stats"></div></div>
+        <button class="export-btn" onclick="exportData()">📥 Xuất dữ liệu (JSON)</button>
+        <button class="reset-btn" onclick="resetData()">🗑️ Xóa tất cả dữ liệu</button>
+    </div>
+
+    <script>
+        let surveyData = JSON.parse(localStorage.getItem('vietcombank_ai_survey')) || {
+            respondents: 0, ai_usage: {}, ai_count_distribution: {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, '5+': 0},
+            agent_choice: {A: 0, B: 0, C: 0, D: 0, E: 0}
+        };
+        const aiList = ['ChatGPT', 'Gemini', 'Claude', 'Grok', 'Copilot', 'DeepSeek', 'Perplexity AI', 'Character.AI', 'ElevenLabs', 'Midjourney', 'Gama', 'Seedance'];
+        aiList.forEach(ai => { if (surveyData.ai_usage[ai] === undefined) surveyData.ai_usage[ai] = 0; });
+        document.getElementById('currentUrl').textContent = window.location.href;
+        
+        document.getElementById('surveyForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const selectedAIs = Array.from(document.querySelectorAll('input[name="ai_tools"]:checked')).map(cb => cb.value);
+            const agentChoice = document.querySelector('input[name="ai_agent"]:checked')?.value;
+            if (!agentChoice) { alert('Vui lòng chọn đáp án cho Câu 2'); return; }
+            surveyData.respondents++;
+            selectedAIs.forEach(ai => surveyData.ai_usage[ai]++);
+            const count = selectedAIs.length;
+            if (count === 0) surveyData.ai_count_distribution[0]++;
+            else if (count <= 4) surveyData.ai_count_distribution[count]++;
+            else surveyData.ai_count_distribution['5+']++;
+            surveyData.agent_choice[agentChoice]++;
+            localStorage.setItem('vietcombank_ai_survey', JSON.stringify(surveyData));
+            document.getElementById('submitBtn').style.display = 'none';
+            document.getElementById('successMessage').classList.add('show');
+            document.getElementById('question1').style.opacity = '0.5';
+            document.getElementById('question2').style.opacity = '0.5';
+            if (document.getElementById('adminPanel').classList.contains('show')) updateStats();
+        });
+
+        function updateStats() {
+            document.getElementById('totalRespondents').textContent = surveyData.respondents;
+            document.getElementById('aiStats').innerHTML = aiList.map(ai => `<div class="stats-item"><span>${ai}</span><strong style="color: var(--primary)">${surveyData.ai_usage[ai]}</strong></div>`).join('');
+            const countLabels = {0: 'Chưa dùng AI nào', 1: '1 AI', 2: '2 AI', 3: '3 AI', 4: '4 AI', '5+': '5 AI trở lên'};
+            document.getElementById('aiCountStats').innerHTML = Object.entries(surveyData.ai_count_distribution).map(([c, n]) => `<div class="stats-item"><span>${countLabels[c]}</span><strong style="color: var(--primary)">${n}</strong></div>`).join('');
+            const q2Labels = {A: 'A - Phân tích dữ liệu', B: 'B - Soạn & gửi email', C: 'C - Truy cập ổ cứng', D: 'D - Đối chiếu dữ liệu', E: 'E - Cả 4 đáp án'};
+            document.getElementById('q2Stats').innerHTML = Object.entries(surveyData.agent_choice).map(([c, n]) => `<div class="stats-item"><span>${q2Labels[c]}</span><strong style="color: var(--primary)">${n}</strong></div>`).join('');
+        }
+        
+        function toggleAdmin() { const p = document.getElementById('adminPanel'); p.classList.toggle('show'); if (p.classList.contains('show')) updateStats(); }
+        
+        function exportData() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(surveyData, null, 2)], {type: 'application/json'})); a.download = 'vietcombank_ai_survey_results.json'; a.click(); }
+        
+        function resetData() {
+            const password = prompt('🔒 Nhập mật khẩu để xóa dữ liệu:');
+            if (password === null) return;
+            if (password !== '1102') {
+                alert('❌ Mật khẩu không đúng!');
+                return;
+            }
+            if (confirm('⚠️ Bạn có chắc chắn muốn xóa tất cả dữ liệu?\nHành động này không thể hoàn tác.')) {
+                surveyData = {
+                    respondents: 0,
+                    ai_usage: {},
+                    ai_count_distribution: {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, '5+': 0},
+                    agent_choice: {A: 0, B: 0, C: 0, D: 0, E: 0}
+                };
+                aiList.forEach(ai => surveyData.ai_usage[ai] = 0);
+                localStorage.setItem('vietcombank_ai_survey', JSON.stringify(surveyData));
+                updateStats();
+                alert('✅ Đã xóa tất cả dữ liệu!');
+            }
+        }
+    </script>
+</body>
+</html>
